@@ -52,8 +52,7 @@ for col in range(5,m-3): #constant Y
         maxX = max(maxX, col)
 
 crop_image = img_original[minY:maxY, minX:maxX]
-plt.imshow(crop_image)
-
+original_crop_image = crop_image
 pure_red = (255, 0, 0)
 pure_green = (0, 255, 0)
 white = (255, 255, 255)
@@ -107,15 +106,7 @@ green_box = get_bounding_box(contours_green)
 
 # Draw bounding boxes
 output_bgr = cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
-
-if red_box:
-    rx, ry, rw, rh = red_box
-    cv2.rectangle(output_bgr, (rx, ry), (rx + rw, ry + rh), (0, 0, 255), 2)  # Red box
-
-if green_box:
-    gx, gy, gw, gh = green_box
-    cv2.rectangle(output_bgr, (gx, gy), (gx + gw, gy + gh), (0, 255, 0), 2)  # Green box
-
+rotation = 0
 # Determine relative position of the green box w.r.t. the red box
 if red_box and green_box:
     rx, ry, rw, rh = red_box  # Red box (x, y, width, height)
@@ -128,24 +119,70 @@ if red_box and green_box:
     # Compare midpoints to determine relative position
     if green_mid_x < red_mid_x:
         position = "Left"
+        rotation = 90
     elif green_mid_x > red_mid_x:
         position = "Right"
+        rotation = -90
     elif green_mid_y < red_mid_y:
         position = "Forward"
+        rotation = 0
     else:
         position = "Backward"
-
+        rotation = 180
     print(f"The green box is {position} relative to the red box.")
 
 # Convert back to RGB for displaying
 output_rgb = cv2.cvtColor(output_bgr, cv2.COLOR_BGR2RGB)
 
 # Display output
-plt.imshow(output_rgb)
-plt.axis("off")
-plt.show()
+# plt.imshow(output_rgb)
+# plt.axis("off")
+# plt.show()
 
-scaled_crop_image = cv2.resize(crop_image, (5,5), cv2.INTER_LINEAR_EXACT)
+def rotate(image,angle):
+    h, w = image.shape[:2]
+    center = (w // 2, h // 2)  # Keep the rotation around the center
+    # Compute rotation matrix (keeps axes fixed)
+    rotation_matrix = cv2.getRotationMatrix2D(center, angle * -1, 1.0)
+    # Keep the image size the same after rotation
+    rotated_image = cv2.warpAffine(image, rotation_matrix, (w, h), flags=cv2.INTER_LINEAR)
+    return rotated_image
+
+def convert_to_primary_colors(image):
+    # Convert image to HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Define color ranges for red, blue, white, and black
+    color_ranges = {
+        "red1": [(0, 50, 50), (10, 255, 255)],  # Lower red
+        "red2": [(170, 50, 50), (180, 255, 255)],  # Upper red
+        "blue": [(90, 50, 50), (130, 255, 255)],  # Blue range
+        "white": [(0, 0, 200), (180, 50, 255)],  # White range
+        "black": [(0, 0, 0), (180, 255, 50)],  # Black range
+    }
+
+    # Create an output image (start as white)
+    output = np.full_like(image, (255, 255, 255))  # Default to white
+
+    # Detect and replace colors
+    for color, (lower, upper) in color_ranges.items():
+        mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+        
+        if color == "red1" or color == "red2":
+            output[mask > 0] = (0, 0, 255)  # Pure Red (BGR)
+        elif color == "blue":
+            output[mask > 0] = (255, 0, 0)  # Pure Blue (BGR)
+        elif color == "white":
+            output[mask > 0] = (255, 255, 255)  # Pure White
+        elif color == "black":
+            output[mask > 0] = (0, 0, 0)  # Pure Black
+
+    return output
+
+scaled_crop_image = cv2.resize(original_crop_image, (5,5), cv2.INTER_LINEAR_EXACT)
+scaled_crop_image = rotate(scaled_crop_image, rotation)
+scaled_crop_image = convert_to_primary_colors(scaled_crop_image)
+
 final_matrix = np.ones((5,5))
 source = (0,0)
 destination = (0,0)
@@ -162,22 +199,23 @@ for rows in range(0,5):
                 final_matrix[rows][col] = 0
         else:
             if r == 1:
-                source = (rows, col)
+                source = (col, rows)
             elif b == 1:
-                destination = (rows, col)
+                destination = (col, rows)
 Matrix = np.array(final_matrix)
 # print(Matrix)
 print(source, destination)
 
 grid = Grid(matrix=Matrix)
-start = grid.node(source[1], source[0])
-end = grid.node(destination[1], destination[0])
+start = grid.node(source[0], source[1])
+end = grid.node(destination[0], destination[1])
 
 finder = AStarFinder(diagonal_movement=0)
 
 path,runs = finder.find_path(start, end, grid)
 print(path)
 # Display output
-plt.imshow(output_rgb)
-plt.axis("off")
+# plt.imshow(output_rgb)
+# plt.axis("off")
+plt.imshow(scaled_crop_image)
 plt.show()
