@@ -10,7 +10,10 @@ from pathfinding.finder.a_star import AStarFinder
 img_original = plt.imread("maze.jpeg")
 cv_image = cv2.imread("maze.jpeg")
 cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-
+# plt.imshow(img_original)
+# cv2.imshow("original", cv_image)
+# img = img_original.mean(axis=2, keepdims = True)/255
+# img = np.concatenate([img_original*3], axis = 2)
 img = img_original
 print('Program Running......')
 vertical_filter = [[-1,-2,-1], [0,0,0], [1,2,1]]
@@ -18,6 +21,10 @@ horizontal_filter = [[-1,0,1], [-2,0,2], [-1,0,1]]
 
 n,m,d = img.shape
 edges = np.zeros((n,m))
+
+# def clamp(n, minn, maxn):
+#     return max(minn, min(n, maxn))
+
 for row in range(3,n-2):
     for col in range(3,m-2):
         local_pixels = img[row-1 : row+2, col-1: col+2, 0] #This 0 is here because my filteration matrix is 3D
@@ -29,6 +36,10 @@ for row in range(3,n-2):
 
         edge_score = math.sqrt(math.pow(horizontal_score,2) + math.pow(vertical_score,2))
         edges[row][col] = 3*edge_score
+
+# cv2.imshow("edging??", edges)
+# cv2.imshow("outline",edges)
+
 minX = sys.maxsize
 minY = sys.maxsize
 
@@ -51,9 +62,36 @@ for col in range(5,m-3): #constant Y
     if(curr - next >= 100):
         maxX = max(maxX, col)
 
+print(minX, minY, maxX, maxY)
+# cv2.rectangle(cv_image, (minX,minY), (maxX,maxY), (0,0,255), 3)
 crop_image = img_original[minY:maxY, minX:maxX]
 plt.imshow(crop_image)
-
+# cv2.imshow("boundary",cv_image)
+# n1 = maxX-minX-5
+# m1 = maxY-minY-5
+# redMin = [2000,2000]
+# redMax = [0,0]
+# greenMin = [sys.maxsize,sys.maxsize]
+# greenMax = [0,0]
+# hsv_frame = cv2.cvtColor(crop_image, cv2.COLOR_BGR2HSV)
+# for rows in range(0,n1):
+#     for col in range(0,m1):
+#         val = hsv_frame[rows][col]
+#         if(val[0] >= 118 and val[0] <= 120):
+#             redMin[0] = min(col, redMin[0])
+#             redMin[1] = min(rows, redMin[1])
+#             redMax[0] = max(col, redMax[0])
+#             redMax[1] = max(rows, redMax[1])
+#         elif(val[0] >= 60 and val[0] <= 61):
+#             greenMin[0] = min(col, greenMin[0])
+#             greenMin[1] = min(rows, greenMin[1])
+#             greenMax[0] = max(col, greenMax[0])
+#             greenMax[1] = max(rows, greenMax[1])
+# print(redMin, redMax)
+# cv2.rectangle(cv_image, (redMin), (redMax), (255,0,0), 3)
+# cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+# cv2.imshow("red_BOX", cv_image)
+# plt.imshow(scaled_crop_image)
 pure_red = (255, 0, 0)
 pure_green = (0, 255, 0)
 white = (255, 255, 255)
@@ -90,61 +128,53 @@ image = crop_image  # Assuming `crop_image` is defined
 # Process the image
 output, mask_red, mask_green = extract_red_green(image)
 
-# Find contours for red and green regions
+# Convert grayscale masks to binary
 contours_red, _ = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 contours_green, _ = cv2.findContours(mask_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-# Function to get bounding box
-def get_bounding_box(contours):
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
-        return (x, y, w, h)  # Return bounding box as (x, y, width, height)
-    return None
-
-# Get bounding boxes
-red_box = get_bounding_box(contours_red)
-green_box = get_bounding_box(contours_green)
 
 # Draw bounding boxes
 output_bgr = cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
 
-if red_box:
-    rx, ry, rw, rh = red_box
-    cv2.rectangle(output_bgr, (rx, ry), (rx + rw, ry + rh), (0, 0, 255), 2)  # Red box
+red_box, green_box = None, None
 
-if green_box:
-    gx, gy, gw, gh = green_box
-    cv2.rectangle(output_bgr, (gx, gy), (gx + gw, gy + gh), (0, 255, 0), 2)  # Green box
+for cnt in contours_red:
+    x, y, w, h = cv2.boundingRect(cnt)
+    red_box = (x, y, w, h)  # Store red bounding box
+    cv2.rectangle(output_bgr, (x, y), (x + w, y + h), (0, 0, 255), 2)  # Red box
 
-# Determine relative position of the green box w.r.t. the red box
+for cnt in contours_green:
+    x, y, w, h = cv2.boundingRect(cnt)
+    green_box = (x, y, w, h)  # Store green bounding box
+    cv2.rectangle(output_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Green box
+
+# Determine relative position
 if red_box and green_box:
-    rx, ry, rw, rh = red_box  # Red box (x, y, width, height)
-    gx, gy, gw, gh = green_box  # Green box (x, y, width, height)
+    rx, ry, rw, rh = red_box
+    gx, gy, gw, gh = green_box
 
-    # Midpoints of the bounding boxes
-    red_mid_x, red_mid_y = rx + rw // 2, ry + rh // 2
-    green_mid_x, green_mid_y = gx + gw // 2, gy + gh // 2
-
-    # Compare midpoints to determine relative position
-    if green_mid_x < red_mid_x:
+    if gx + gw < rx:  
         position = "Left"
-    elif green_mid_x > red_mid_x:
+    elif gx > rx + rw:  
         position = "Right"
-    elif green_mid_y < red_mid_y:
-        position = "Forward"
+    elif gy + gh < ry:  
+        position = "Above"
+    elif gy > ry + rh:  
+        position = "Below"
+    elif gx + gw < rx and gy + gh < ry:
+        position = "Top-left"
+    elif gx > rx + rw and gy + gh < ry:
+        position = "Top-right"
+    elif gx + gw < rx and gy > ry + rh:
+        position = "Bottom-left"
+    elif gx > rx + rw and gy > ry + rh:
+        position = "Bottom-right"
     else:
-        position = "Backward"
+        position = "Overlapping"
 
     print(f"The green box is {position} relative to the red box.")
 
-# Convert back to RGB for displaying
+# Convert back to RGB for matplotlib
 output_rgb = cv2.cvtColor(output_bgr, cv2.COLOR_BGR2RGB)
-
-# Display output
-plt.imshow(output_rgb)
-plt.axis("off")
-plt.show()
-
 scaled_crop_image = cv2.resize(crop_image, (5,5), cv2.INTER_LINEAR_EXACT)
 final_matrix = np.ones((5,5))
 source = (0,0)
