@@ -213,9 +213,71 @@ end = grid.node(destination[0], destination[1])
 finder = AStarFinder(diagonal_movement=0)
 
 path,runs = finder.find_path(start, end, grid)
+pathString = ""
+currDirection = "t"
+prev = 0
 print(path)
+for node in path:
+    if(prev == 0):
+        prev = node
+    if prev!=node:
+        x = node.x - prev.x
+        y = node.y - prev.y
+        if(x == 1 and y == 0): #absolute right
+            if(currDirection == "t"):
+                pathString+="rf"
+                currDirection = "r"
+            elif(currDirection == "r"):
+                pathString+="f"
+            elif(currDirection == "b"):
+                pathString+="lf"
+                currDirection = "r"
+            elif(currDirection == "l"):
+                pathString+="rrf"
+                currDirection = "r"
+        if(x == -1 and y == 0): #absolute left
+            if(currDirection == "t"):
+                pathString+="lf"
+                currDirection = "l"
+            elif(currDirection == "r"):
+                pathString+="llf"
+                currDirection = "l"
+            elif(currDirection == "b"):
+                pathString+="rf"
+                currDirection = "l"
+            elif(currDirection == "l"):
+                pathString+="f"
+        if(x == 0 and y == -1): #absolute top
+            if(currDirection == "t"):
+                pathString+="f"
+                currDirection = "t"
+            elif(currDirection == "r"):
+                pathString+="lf"
+                currDirection = "t"
+            elif(currDirection == "b"):
+                pathString+="rrf"
+                currDirection = "t"
+            elif(currDirection == "l"):
+                pathString+="rf"
+                currDirection = "t"
+        if(x == 0 and y == 1): #absolute bottom
+            if(currDirection == "t"):
+                pathString+="llf"
+                currDirection = "b"
+            elif(currDirection == "r"):
+                pathString+="rf"
+                currDirection = "b"
+            elif(currDirection == "b"):
+                pathString+="f"
+                currDirection = "b"
+            elif(currDirection == "l"):
+                pathString+="lf"
+                currDirection = "b"
+    prev = node
 # Display output
 # plt.imshow(output_rgb)
 # plt.axis("off")
+print(pathString)
 plt.imshow(scaled_crop_image)
 plt.show()
+
