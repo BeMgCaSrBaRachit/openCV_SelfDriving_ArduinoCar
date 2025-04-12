@@ -270,7 +270,7 @@ def calculate(image):
                 elif(currDirection == "r"):
                     pathString+="rf"
                     currDirection = "b"
-                elif(currDirection == "b"):
+                elif(currDirection == "b"): 
                     pathString+="f"
                     currDirection = "b"
                 elif(currDirection == "l"):

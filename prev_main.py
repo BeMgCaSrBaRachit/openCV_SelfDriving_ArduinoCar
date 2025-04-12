@@ -52,6 +52,7 @@ for col in range(5,m-3): #constant Y
         maxX = max(maxX, col)
 
 crop_image = img_original[minY:maxY, minX:maxX]
+cv2.imshow("Cropped image", crop_image)
 original_crop_image = crop_image
 pure_red = (255, 0, 0)
 pure_green = (0, 255, 0)
@@ -181,6 +182,7 @@ def convert_to_primary_colors(image):
 
 scaled_crop_image = cv2.resize(original_crop_image, (5,5), cv2.INTER_LINEAR_EXACT)
 scaled_crop_image = rotate(scaled_crop_image, rotation)
+plt.imshow(scaled_crop_image)
 scaled_crop_image = convert_to_primary_colors(scaled_crop_image)
 
 final_matrix = np.ones((5,5))
@@ -203,7 +205,7 @@ for rows in range(0,5):
             elif b == 1:
                 destination = (col, rows)
 Matrix = np.array(final_matrix)
-# print(Matrix)
+print(Matrix)
 print(source, destination)
 
 grid = Grid(matrix=Matrix)
@@ -218,6 +220,7 @@ currDirection = "t"
 prev = 0
 print(path)
 for node in path:
+    print(node.x, node.y)
     if(prev == 0):
         prev = node
     if prev!=node:
